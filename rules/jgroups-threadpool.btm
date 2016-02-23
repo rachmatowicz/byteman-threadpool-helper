@@ -1,0 +1,59 @@
+###########################################################
+#
+# Rules for minitoring ThreadPoolExecutors
+# - every 10th time execute() is called, spits out stats
+#
+###########################################################
+IMPORT org.wildfly.byteman.rule.helper.threadpool
+HELPER org.wildfly.byteman.rule.helper.threadpool.JGroupsThreadPoolHelper
+
+RULE TP_up
+CLASS org.jgroups.protocols.TP
+METHOD Object up(Event)
+AT ENTRY
+IF (incrementCounter($0) > 0) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: regular, THREADPOOL: " + getRegularThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: OOB, THREADPOOL: " + getOOBThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: internal, THREADPOOL: " + getInternalThreadPoolStats($0)) ;
+ENDRULE
+
+RULE TP_down
+CLASS org.jgroups.protocols.TP
+METHOD Object down(Event)
+AT ENTRY
+IF (incrementCounter($0) > 0) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: regular, THREADPOOL: " + getRegularThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: OOB, THREADPOOL: " + getOOBThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: internal, THREADPOOL: " + getInternalThreadPoolStats($0)) ;
+ENDRULE
+
+RULE TP_init
+CLASS org.jgroups.protocols.TP
+METHOD <init>
+AT EXIT
+IF createCounter($0)
+DO
+  System.out.println("[BYTEMAN]: Created counter for TP " + $0 + ", counter value = " + readCounter($0));
+ENDRULE
+
+RULE TP_destroy
+CLASS org.jgroups.protocols.TP
+METHOD destroy
+AT ENTRY
+IF deleteCounter($0)
+DO
+  System.out.println("[BYTEMAN]: Calling destroy for TP " + $0);
+ENDRULE
+
+RULE RejectedExecutionException_throw_jgroups
+CLASS java.util.concurrent.RejectedExecutionException
+METHOD <init>
+AT ENTRY
+BIND
+  executor:ThreadPoolExecutor = $0;
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: JGroups throwing RejectedExecutionException for executor " + $0);
+ENDRULE

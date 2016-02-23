@@ -1,0 +1,340 @@
+###########################################################
+# Rules for minitoring ThreadPoolExecutors
+# - every 10th time execute() is called, spits out stats
+# triggered on:
+# Executor (just executes a task with no means to cancel)
+# - execute
+# ExecutorService (returns a future to check status or cancel task which was scehduled)
+# - invokeAll
+# - invokeAny
+# - submit
+# - newTaskFor
+# ScheduledExecutorService (allows defining delay or periodic submission)
+# - schedule
+# - scheduleAtFixedRate
+# - scheduleWithFixedDelay
+#
+# - most tasks uses these lazily initialized executors; they are initialized when first callled (after init)
+# - the come in three flavours: LazyInitializing{, Scheduled, BlockingTaskAware}ExecutorService
+# - they are basically an executor service, and so allow submitting tasks and getting back a future
+# - when the task is submitted,it either gets a thread assigned to it and runs or its gets queued
+###########################################################
+IMPORT org.wildfly.byteman.rule.helper.threadpool
+HELPER org.wildfly.byteman.rule.helper.threadpool.ThreadPoolHelper
+
+RULE NamedExecutorsFactory_construct
+CLASS org.infinispan.factories.NamedExecutorsFactory
+METHOD construct
+AT EXIT
+IF createCounter($!)
+DO
+  link($!, "executor-name", $2);
+#  System.out.println("[BYTEMAN]: Created counter for NamedExecutor(" + $2 + "): " + $!);
+ENDRULE
+
+###########################################################
+#
+# LazyInitializingExecutorService
+#
+############################################################
+
+RULE LazyInitializingExecutorService_execute
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD execute
+AT ENTRY
+BIND
+  executor:LazyInitializingExecutorService = $0;
+# delegate -> java.util.concurrent.ThreadPoolExecutor
+  delegate:java.util.concurrent.ThreadPoolExecutor = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: execute, EXECUTOR: " + executorName  + " THREADPOOL: " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingExecutorService_submit
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD submit
+AT ENTRY
+BIND
+  executor:LazyInitializingExecutorService = $0;
+# delegate -> java.util.concurrent.ThreadPoolExecutor
+  delegate:java.util.concurrent.ThreadPoolExecutor = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: execute, EXECUTOR: " + executorName  + " THREADPOOL: " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingExecutorService_invokeAll
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD invokeAll
+AT ENTRY
+BIND
+  executor:LazyInitializingExecutorService = $0;
+# delegate -> java.util.concurrent.ThreadPoolExecutor
+  delegate:java.util.concurrent.ThreadPoolExecutor = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: execute, EXECUTOR: " + executorName  + " THREADPOOL: " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingExecutorService_invokeAny
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD invokeAny
+AT ENTRY
+BIND
+  executor:LazyInitializingExecutorService = $0;
+# delegate -> java.util.concurrent.ThreadPoolExecutor
+  delegate:java.util.concurrent.ThreadPoolExecutor = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN]: OPERATION: execute, EXECUTOR: " + executorName  + " THREADPOOL: " + getThreadPoolStats($0));
+ENDRULE
+
+###########################################################
+#
+# LazyInitializingScheduledExecutorService
+#
+############################################################
+
+RULE LazyInitializingScheduledExecutorService_execute
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD execute
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+  delegate:java.util.concurrent.ScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: execute, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_submit
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD submit
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: submit, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_invokeAll
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD invokeAll
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: invokeAll, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_invokeAny
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD invokeAny
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+# delegate:java.util.concurrent.ScheduledExecutorService = executor.delegate;
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: invokeAny, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_schedule
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD schedule
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+#  delegate:java.util.concurrent.ScheduledExecutorService = executor.delegate;
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+# the variable 'delegate' may be null, so we can't easily assign delegateThreadPool before COND
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: schedule, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_scheduleAtFixedRate
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD scheduleAtFixedRate
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+#  delegate:java.util.concurrent.ScheduledExecutorService = executor.delegate;
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: scheduleAtFixedRate, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+RULE LazyInitializingScheduledExecutorService_scheduleWithFixedDelay
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD scheduleWithFixedDelay
+AT ENTRY
+BIND
+  executor:LazyInitializingScheduledExecutorService = $0;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+# delegate:java.util.concurrent.ScheduledExecutorService = executor.delegate;
+  delegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = executor.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIS]: OPERATION: scheduleWithFixedDelay, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0));
+ENDRULE
+
+###########################################################
+#
+# LazyInitializingBlockingTaskAwareExecutorService
+#
+############################################################
+
+RULE LazyInitializingBlockingTaskAwareExecutorService_execute
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD execute
+AT ENTRY
+BIND
+  executor:LazyInitializingBlockingTaskAwareExecutorService = $0;
+# delegate ->  org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl
+  delegate:org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIB]: OPERATION: execute, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0) + ", BLOCKED TASKS " + delegate.blockedTasks.size());
+ENDRULE
+
+RULE LazyInitializingBlockingTaskAwareExecutorService_submit
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD submit
+AT ENTRY
+BIND
+  executor:LazyInitializingBlockingTaskAwareExecutorService = $0;
+# delegate ->  org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl
+  delegate:org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIB]: OPERATION: submit, EXECUTOR: " + executorName + ", THREADPOOL " + getThreadPoolStats($0) + ", BLOCKED TASKS " + delegate.blockedTasks);
+ENDRULE
+
+RULE LazyInitializingBlockingTaskAwareExecutorService_invokeAll
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD invokeAll
+AT ENTRY
+BIND
+  executor:LazyInitializingBlockingTaskAwareExecutorService = $0;
+# delegate ->  org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl
+  delegate:org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIB]: OPERATION: invokeAll, EXECUTOR: " + executorName + ", THREADPOOL " +  getThreadPoolStats($0) + ", BLOCKED TASKS " + delegate.blockedTasks);
+ENDRULE
+
+RULE LazyInitializingBlockingTaskAwareExecutorService_invokeAny
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD invokeAny
+AT ENTRY
+BIND
+  executor:LazyInitializingBlockingTaskAwareExecutorService = $0;
+# delegate ->  org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl
+  delegate:org.infinispan.util.concurrent.BlockingTaskAwareExecutorServiceImpl = $0.delegate;
+  hasDelegate:boolean = (delegate != null);
+  executorName:String = linked($0, "executor-name");
+IF (incrementCounter($0) > 0) AND (hasDelegate) AND (readCounter($0) % 1 == 0)
+DO
+  System.out.println("[BYTEMAN-LIB]: OPERATION: invokeAny, EXECUTOR: " + executorName + ", THREADPOOL " +  getThreadPoolStats($0) + ", BLOCKED TASKS " + delegate.blockedTasks);
+ENDRULE
+
+#######################################################
+
+RULE RejectedExecutionException_throw_infinispan
+CLASS java.util.concurrent.RejectedExecutionException
+METHOD <init>
+AT ENTRY
+BIND
+  executor:ThreadPoolExecutor = $0;
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: Throwing RejectedExecutionException for executor " + $0);
+ENDRULE
+
+######################################################
+
+RULE CommandAwareRPCDispatcher_processCalls
+CLASS org.infinispan.remoting.transport.jgroups.CommandAwareRpcDispatcher
+METHOD processCalls
+AT EXIT
+BIND
+# owner of field = $0
+  timeoutExecutor:org.infinispan.executors.LazyInitializingScheduledExecutorService = $0.timeoutExecutor;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+# owner of field = $0.timeoutExecutor
+  executorDelegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = timeoutExecutor.delegate;
+  delegateThreadPool:java.util.concurrent.ScheduledThreadPoolExecutor = executorDelegate.e;
+#
+  poolSize:int = delegateThreadPool.getPoolSize();
+  poolSizeActive:int = delegateThreadPool.getActiveCount();
+  queueSize:int = delegateThreadPool.getQueue().size();
+  completedTasks:long = delegateThreadPool.getCompletedTaskCount();
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: ISPN timeoutExector thread pool [pool, activePool, queuedTasks, completedTasks] = [" + poolSize + ", " + poolSizeActive  + ", " + queueSize + ", " + completedTasks + "]");
+ENDRULE
+
+
+RULE CommandAwareRPCDispatcher_processSingleCall
+CLASS org.infinispan.remoting.transport.jgroups.CommandAwareRpcDispatcher
+METHOD processSingleCall
+AT EXIT
+BIND
+  timeoutExecutor:org.infinispan.executors.LazyInitializingScheduledExecutorService = $0.timeoutExecutor;
+# delegate -> java.util.concurrent.Executors$DelegatedScheduledExecutorService
+  executorDelegate:java.util.concurrent.Executors$DelegatedScheduledExecutorService = timeoutExecutor.delegate;
+  delegateThreadPool:java.util.concurrent.ScheduledThreadPoolExecutor = executorDelegate.e;
+#
+  poolSize:int = delegateThreadPool.getPoolSize();
+  poolSizeActive:int = delegateThreadPool.getActiveCount();
+  queueSize:int = delegateThreadPool.getQueue().size();
+  completedTasks:long = delegateThreadPool.getCompletedTaskCount();
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: ISPN timeoutExector thread pool [pool, activePool, queuedTasks, completedTasks] = [" + poolSize + ", " + poolSizeActive  + ", " + queueSize + ", " + completedTasks + "]");
+ENDRULE
+
+
+

@@ -1,0 +1,50 @@
+###########################################################
+#
+# Rules for minitoring ThreadPoolExecutors
+# - every 10 seconds, spits out stats
+#
+###########################################################
+IMPORT org.wildfly.byteman.rule.helper.threadpool
+HELPER org.wildfly.byteman.rule.helper.threadpool.PeriodicJGroupsThreadPoolHelper
+
+RULE TP_init
+CLASS org.jgroups.protocols.TP
+METHOD void init()
+AT EXIT
+IF TRUE
+DO
+# thread pools are created in TP.init
+  System.out.println("[BYTEMAN]: Adding executors for TP: " + $0 + " with regular = " + $0.getDefaultThreadPool() + ", OOB = " + $0.getOOBThreadPool() + ", internal = " + $0.getInternalThreadPool());
+  addTransportThreadPoolsToMap($0);
+ENDRULE
+
+RULE JGroups periodic helper hook
+CLASS org.wildfly.byteman.rule.helper.threadpool.JGroupsPeriodicHelper
+METHOD periodicTrigger
+AT ENTRY
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] periodicTrigger called by thread");
+  System.out.println(dumpStatsForExecutorInMap()) ;
+ENDRULE
+
+RULE TP_destroy
+CLASS org.jgroups.protocols.TP
+METHOD destroy
+AT ENTRY
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: Calling destroy for TP: " + $0);
+  removeTransportThreadPoolsFromMap($0)
+ENDRULE
+
+RULE RejectedExecutionException_throw_jgroups
+CLASS java.util.concurrent.RejectedExecutionException
+METHOD <init>
+AT ENTRY
+BIND
+  executor:ThreadPoolExecutor = $0;
+IF TRUE
+DO
+  System.out.println("[BYTEMAN]: JGroups throwing RejectedExecutionException for executor " + $0);
+ENDRULE

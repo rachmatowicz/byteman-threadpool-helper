@@ -1,5 +1,6 @@
 package org.wildfly.byteman.rule.helper.threadpool;
 
+import org.apache.log4j.Logger;
 import org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService;
 import org.infinispan.executors.LazyInitializingExecutorService;
 import org.infinispan.executors.LazyInitializingScheduledExecutorService;
@@ -29,6 +30,9 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class InfinispanThreadPoolHelper extends Helper
 {
+    private static Logger log = Logger.getLogger(InfinispanThreadPoolHelper.class.getName());
+    private final String STATS_NOT_AVAILABLE = "[pool, activePool, queuedTasks, completedTasks] = [n/a, n/a, n/a, n/a]";
+
     public InfinispanThreadPoolHelper(Rule rule)
     {
         super(rule);
@@ -43,8 +47,16 @@ public class InfinispanThreadPoolHelper extends Helper
      */
     public String getThreadPoolStats(LazyInitializingExecutorService executorService) throws IllegalAccessException
     {
+        if (executorService == null)
+            throw new IllegalArgumentException("ExecutorService instance input cannot be null");
+
         // get the thread pool executor
         ThreadPoolExecutor tpe = (ThreadPoolExecutor) getFieldValue(executorService, "delegate");
+
+        if (tpe == null) {
+            // thread pool stats are no available, so return a dummy string
+            return STATS_NOT_AVAILABLE;
+        }
 
         // return the thread pool stats
         return getThreadPoolStatistics(tpe);
@@ -60,11 +72,15 @@ public class InfinispanThreadPoolHelper extends Helper
      */
     public String getThreadPoolStats(LazyInitializingScheduledExecutorService executorService) throws IllegalAccessException
     {
+        if (executorService == null)
+            throw new IllegalArgumentException("ExecutorService instance input cannot be null");
+
         // get the executor delegate
         ScheduledExecutorService executorServiceDelegate = (ScheduledExecutorService) getFieldValue(executorService, "delegate");
-        // debug
-        if (executorServiceDelegate != null) {
-            System.out.println("ScheduledExecutorServiceDelegate class - " + executorServiceDelegate.getClass().getName());
+
+        if (executorServiceDelegate == null) {
+            // thread pool stats are no available, so return a dummy string
+            return STATS_NOT_AVAILABLE;
         }
 
         // two cases:
@@ -78,18 +94,15 @@ public class InfinispanThreadPoolHelper extends Helper
             // we don't immediately have a ThreadPoolExecutor - drill down until we reach it
             // get the implementing class of the delegate
             Class executorsClazz = getExecutorsClass();
-            // debug
-            if (executorsClazz != null) {
-                System.out.println("Executors class - " + executorsClazz.getName());
-            }
             Class executorsInnerClazz = getDeclaredClass(executorsClazz, "java.util.concurrent.Executors$DelegatedScheduledExecutorService");
-            // debug
-            if (executorsInnerClazz != null) {
-                System.out.println("Executors inner class - " + executorsInnerClazz.getName());
-            }
 
             // now get the value of the delegate thread pool within the inner class
             ScheduledExecutorService ses = (ScheduledExecutorService) getFieldValue(executorsInnerClazz.cast(executorServiceDelegate), "e");
+
+            if (ses == null) {
+                // thread pool stats are no available, so return a dummy string
+                return STATS_NOT_AVAILABLE;
+            }
 
             // return the stats
             return getThreadPoolStatistics((ThreadPoolExecutor) ses);
@@ -104,8 +117,16 @@ public class InfinispanThreadPoolHelper extends Helper
      */
     public String getThreadPoolStats(LazyInitializingBlockingTaskAwareExecutorService executorService) throws IllegalAccessException
     {
+        if (executorService == null)
+            throw new IllegalArgumentException("ExecutorService instance input cannot be null");
+
         // get the executor delegate
         BlockingTaskAwareExecutorService delegateExecutorService = (BlockingTaskAwareExecutorService) getFieldValue(executorService, "delegate");
+
+        if (delegateExecutorService == null) {
+            // thread pool stats are no available, so return a dummy string
+            return STATS_NOT_AVAILABLE;
+        }
 
         // need to get at the member variables in the implementation behind the interface:
         // the thread pool delegate
@@ -113,6 +134,11 @@ public class InfinispanThreadPoolHelper extends Helper
         BlockingTaskAwareExecutorServiceImpl delegateExecutorServiceImpl = (BlockingTaskAwareExecutorServiceImpl) delegateExecutorService;
         ExecutorService delegateDelegateExecutorService = (ExecutorService) getFieldValue(delegateExecutorServiceImpl, "executorService");
         ThreadPoolExecutor tpe = (ThreadPoolExecutor) delegateDelegateExecutorService;
+
+        if (tpe == null) {
+            // thread pool stats are no available, so return a dummy string
+            return STATS_NOT_AVAILABLE;
+        }
 
         // get the stats for the thread pool
         return getThreadPoolStatistics(tpe);
@@ -140,7 +166,7 @@ public class InfinispanThreadPoolHelper extends Helper
             executorsClass = Class.forName("java.util.concurrent.Executors");
             return executorsClass;
         } catch (ClassNotFoundException cnfe) {
-            System.out.println("Class not found: " + cnfe.getMessage());
+            log.error("Class not found during executor service lookup: " + cnfe.getMessage());
         }
         return null;
     }
@@ -159,7 +185,7 @@ public class InfinispanThreadPoolHelper extends Helper
             f = o.getClass().getDeclaredField(fieldName);
             f.setAccessible(true);
         } catch (NoSuchFieldException nsfe) {
-            System.out.println("Exception occurred: " + nsfe.getMessage());
+            log.error("Exception occurred: " + nsfe.getMessage());
         }
         return f.get(o);
     }
@@ -178,7 +204,7 @@ public class InfinispanThreadPoolHelper extends Helper
         try {
             retVal = m.invoke(o, args);
         } catch (Exception e) {
-            System.out.println("Exception occurred: " + e.getMessage());
+            log.error("Exception occurred: " + e.getMessage());
         }
         return retVal;
     }
@@ -195,7 +221,7 @@ public class InfinispanThreadPoolHelper extends Helper
         try {
             classes = parentClazz.getDeclaredClasses();
         } catch (SecurityException se) {
-            System.out.println("Security exception: " + se.getMessage());
+            log.error("Security exception: " + se.getMessage());
         }
         for (Class clazz : classes) {
             if (clazz.getName().equals(className)) {

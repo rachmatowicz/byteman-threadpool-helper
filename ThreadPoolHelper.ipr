@@ -178,6 +178,17 @@
     <mapping directory="$USER_HOME$/projects/thread-pool-helper-git-repo" vcs="Git" />
   </component>
   <component name="libraryTable">
+    <library name="Maven: log4j:log4j:1.2.16">
+      <CLASSES>
+        <root url="jar://$MAVEN_REPOSITORY$/log4j/log4j/1.2.16/log4j-1.2.16.jar!/" />
+      </CLASSES>
+      <JAVADOC>
+        <root url="jar://$MAVEN_REPOSITORY$/log4j/log4j/1.2.16/log4j-1.2.16-javadoc.jar!/" />
+      </JAVADOC>
+      <SOURCES>
+        <root url="jar://$MAVEN_REPOSITORY$/log4j/log4j/1.2.16/log4j-1.2.16-sources.jar!/" />
+      </SOURCES>
+    </library>
     <library name="Maven: org.infinispan:infinispan-commons:6.0.2.Final">
       <CLASSES>
         <root url="jar://$MAVEN_REPOSITORY$/org/infinispan/infinispan-commons/6.0.2.Final/infinispan-commons-6.0.2.Final.jar!/" />
@@ -198,6 +209,17 @@
       </JAVADOC>
       <SOURCES>
         <root url="jar://$MAVEN_REPOSITORY$/org/infinispan/infinispan-core/6.0.2.Final/infinispan-core-6.0.2.Final-sources.jar!/" />
+      </SOURCES>
+    </library>
+    <library name="Maven: org.jboss.byteman:byteman-sample:3.0.3">
+      <CLASSES>
+        <root url="jar://$MAVEN_REPOSITORY$/org/jboss/byteman/byteman-sample/3.0.3/byteman-sample-3.0.3.jar!/" />
+      </CLASSES>
+      <JAVADOC>
+        <root url="jar://$MAVEN_REPOSITORY$/org/jboss/byteman/byteman-sample/3.0.3/byteman-sample-3.0.3-javadoc.jar!/" />
+      </JAVADOC>
+      <SOURCES>
+        <root url="jar://$MAVEN_REPOSITORY$/org/jboss/byteman/byteman-sample/3.0.3/byteman-sample-3.0.3-sources.jar!/" />
       </SOURCES>
     </library>
     <library name="Maven: org.jboss.byteman:byteman:3.0.3">

@@ -1,0 +1,104 @@
+###########################################################
+# Rules for monitoring ThreadPoolExecutors
+# - every time periodicTrigger() is called, spits out stats
+# triggered on:
+# - every getPeriod() seconds
+#
+# - most tasks uses these lazily initialized executors; they are initialized when first callled (after init)
+# - the come in three flavours: LazyInitializing{, Scheduled, BlockingTaskAware}ExecutorService
+# - they are basically an executor service, and so allow submitting tasks and getting back a future
+# - when the task is submitted,it either gets a thread assigned to it and runs or its gets queued
+###########################################################
+# import the JBoss Modules module org.wildfly.byteman.rule.helper.threadpool
+IMPORT org.wildfly.byteman.rule.helper.threadpool
+
+# make use of the helper defined in that JBoss Modules module
+HELPER org.wildfly.byteman.rule.helper.threadpool.PeriodicInfinispanThreadPoolHelper
+
+RULE Add new ServiceExecutor to map
+CLASS org.infinispan.factories.NamedExecutorsFactory
+# public <T> T construct(Class<T> componentType, String componentName)
+METHOD construct
+BIND
+  cacheManagerName:String = $0.globalConfiguration.globalJmxStatistics().cacheManagerName();
+  executorName:String = $2;
+AT EXIT
+IF TRUE
+DO
+# map thread pool name to created ServiceExecutor
+  System.out.println("[BYTEMAN-P]: Adding ServiceExecutor " + executorName + " for CacheManager " + cacheManagerName + " to map: " + $!);
+  addExecutorServiceToMap(cacheManagerName,executorName,$!);
+ENDRULE
+
+RULE Infinispan periodic helper hook
+CLASS org.wildfly.byteman.rule.helper.threadpool.InfinispanPeriodicHelper
+METHOD periodicTrigger
+AT ENTRY
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] periodicTrigger called by thread");
+  System.out.println(dumpStatsForExecutorServiceInMap()) ;
+ENDRULE
+
+#
+# The rules below can probably be triggered just by subclasses of ExecutorService
+#
+RULE Remove LazyInitializingExecutorService from map#1
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD void shutdown()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE
+
+RULE Remove LazyInitializingExecutorService from map#2
+CLASS org.infinispan.executors.LazyInitializingExecutorService
+METHOD void shutdownNow()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE
+
+RULE Remove LazyInitializingScheduledExecutorService from map#1
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD void shutdown()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE
+
+RULE Remove LazyInitializingScheduledExecutorService from map#2
+CLASS org.infinispan.executors.LazyInitializingScheduledExecutorService
+METHOD void shutdownNow()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE
+
+RULE Remove LazyInitializingBlockingTaskAwareExecutorService from map#1
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD void shutdown()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE
+
+RULE Remove LazyInitializingBlockingTaskAwareExecutorService from map#2
+CLASS org.infinispan.executors.LazyInitializingBlockingTaskAwareExecutorService
+METHOD void shutdownNow()
+AT EXIT
+IF TRUE
+DO
+  System.out.println("[BYTEMAN-P] Removing ExecutorService from map:" + $0);
+  removeExecutorServiceFromMap($0);
+ENDRULE

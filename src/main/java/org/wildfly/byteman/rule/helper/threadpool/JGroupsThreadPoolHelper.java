@@ -1,5 +1,6 @@
 package org.wildfly.byteman.rule.helper.threadpool;
 
+import org.apache.log4j.Logger;
 import org.jboss.byteman.rule.Rule;
 import org.jboss.byteman.rule.helper.Helper;
 import org.jgroups.protocols.TP;
@@ -10,6 +11,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class JGroupsThreadPoolHelper extends Helper
 {
+    private static Logger log = Logger.getLogger(JGroupsThreadPoolHelper.class.getName());
+
     /**
      * The transport contains three threadpools:
      * - regular (thread_ppol)
@@ -50,7 +53,7 @@ public class JGroupsThreadPoolHelper extends Helper
 
 
 
-    private String getThreadPoolStatistics(ThreadPoolExecutor tpe)
+    public String getThreadPoolStatistics(ThreadPoolExecutor tpe)
     {
         StringBuffer sb = new StringBuffer();
         sb.append("[pool, activePool, queuedTasks, completedTasks] = [");

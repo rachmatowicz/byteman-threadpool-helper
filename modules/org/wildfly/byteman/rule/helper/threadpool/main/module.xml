@@ -6,5 +6,6 @@
     <dependencies>
     	<module name="org.infinispan"/>
         <module name="org.jgroups"/>
+        <module name="org.apache.log4j"/>
     </dependencies>
 </module>

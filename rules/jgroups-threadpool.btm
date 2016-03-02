@@ -24,9 +24,9 @@ METHOD Object down(Event)
 AT ENTRY
 IF (incrementCounter($0) > 0) AND (readCounter($0) % 1 == 0)
 DO
-  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: regular, THREADPOOL: " + getRegularThreadPoolStats($0)) ;
-  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: OOB, THREADPOOL: " + getOOBThreadPoolStats($0)) ;
-  System.out.println("[BYTEMAN]: OPERATION: TP.up, EXECUTOR: internal, THREADPOOL: " + getInternalThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.down, EXECUTOR: regular, THREADPOOL: " + getRegularThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.down, EXECUTOR: OOB, THREADPOOL: " + getOOBThreadPoolStats($0)) ;
+  System.out.println("[BYTEMAN]: OPERATION: TP.down, EXECUTOR: internal, THREADPOOL: " + getInternalThreadPoolStats($0)) ;
 ENDRULE
 
 RULE TP_init

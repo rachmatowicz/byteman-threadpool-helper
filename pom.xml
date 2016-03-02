@@ -72,6 +72,11 @@
             <version>${version.org.jboss.byteman}</version>
         </dependency>
         <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman-sample</artifactId>
+            <version>${version.org.jboss.byteman}</version>
+        </dependency>
+        <dependency>
             <groupId>org.infinispan</groupId>
             <artifactId>infinispan-core</artifactId>
             <version>${version.org.infinispan}</version>
@@ -80,6 +85,11 @@
             <groupId>org.jgroups</groupId>
             <artifactId>jgroups</artifactId>
             <version>${version.org.jgroups}</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
         </dependency>
     </dependencies>
 
